@@ -1,0 +1,9 @@
+# YOLO11 Dataset Config — Indian License Plate Detection
+# Download dataset from: https://universe.roboflow.com (search "Indian License Plate")
+path: ./dataset
+train: images/train
+val:   images/val
+test:  images/test
+nc: 1
+names:
+  - license_plate
