@@ -19,7 +19,7 @@ function FloatingPlates() {
         border: '1px solid rgba(99,102,241,0.12)',
         borderRadius: '6px',
         padding: '4px 12px',
-        fontFamily: '"JetBrains Mono", monospace',
+        fontFamily: '"Geist Mono", monospace',
         fontSize: '0.68rem',
         fontWeight: '600',
         color: 'rgba(99,102,241,0.35)',

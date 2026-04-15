@@ -4,9 +4,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
-      },
+  sans: ['Satoshi', 'sans-serif'],
+  mono: ['"Geist Mono"', 'monospace'],
+},
     },
   },
   plugins: [],
