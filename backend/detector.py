@@ -50,13 +50,11 @@ class ANPRDetector:
         preprocessing_applied = []
         processed = image.copy()
 
-        # Low light check
         brightness = np.mean(cv2.cvtColor(image, cv2.COLOR_RGB2GRAY))
         if brightness < 80:
             processed = enhance_image(processed)
             preprocessing_applied.append("CLAHE Night Enhancement")
 
-        # Run YOLO detection
         results = self.model(processed, conf=0.25, iou=0.45)
         annotated = processed.copy()
 
@@ -73,20 +71,17 @@ class ANPRDetector:
                 "preprocessing_applied": preprocessing_applied,
             }
 
-        # Get highest confidence detection
         boxes = results[0].boxes
         best_idx = int(boxes.conf.argmax())
         box = boxes[best_idx]
         conf = float(box.conf[0])
         x1, y1, x2, y2 = map(int, box.xyxy[0])
 
-        # Draw bounding box
         cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 100), 3)
         label = f"Plate {conf*100:.1f}%"
         cv2.putText(annotated, label, (x1, y1 - 12),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 100), 2)
 
-        # ── FIX 1: Padded crop so edges aren't cut off ──────────────────
         PAD = 12
         h_img, w_img = image.shape[:2]
         x1p = max(0, x1 - PAD)
@@ -95,7 +90,6 @@ class ANPRDetector:
         y2p = min(h_img, y2 + PAD)
         plate_crop = image[y1p:y2p, x1p:x2p]
 
-        # ── FIX 2: Upscale small crops so OCR reads better ───────────────
         crop_h, crop_w = plate_crop.shape[:2]
         if crop_w < 200:
             scale = 200 / crop_w
@@ -109,7 +103,6 @@ class ANPRDetector:
         enhanced_crop = apply_clahe(plate_crop)
         preprocessing_applied.append("Plate Crop Enhancement")
 
-        # ── FIX 3: Merge ALL OCR text regions left-to-right ─────────────
         plate_text = "N/A"
         ocr_conf = 0.0
         if self.reader:
@@ -122,11 +115,11 @@ class ANPRDetector:
                 text_threshold=0.6,
             )
             if ocr_results:
-                # Sort detections left to right by x position
-                ocr_results.sort(key=lambda r: r[0][0][0])
-                # Join all detected text pieces
-                raw_text = ''.join([r[1] for r in ocr_results])
+                # Sort left to right by CENTER x
+                ocr_results.sort(key=lambda r: (r[0][0][0] + r[0][2][0]) / 2)
+                raw_text = ''.join([r[1] for r in ocr_results]).upper()
                 ocr_conf = sum([r[2] for r in ocr_results]) / len(ocr_results)
+                # format_plate_text handles ALL fixing including reversal
                 plate_text = format_plate_text(raw_text)
 
         state = extract_state_from_plate(plate_text)
@@ -145,7 +138,6 @@ class ANPRDetector:
         }
 
     def _mock_inference(self, image: np.ndarray) -> dict:
-        """Mock inference for demo/testing without trained model."""
         import random
         sample_plates = [
             ("MH12AB1234", "Maharashtra", "Private"),
