@@ -8,6 +8,9 @@ from postprocess import format_plate_text, extract_state_from_plate, classify_pl
 try:
     from ultralytics import YOLO
     import easyocr
+    import torch
+    import ultralytics.nn.tasks
+    torch.serialization.add_safe_globals([ultralytics.nn.tasks.DetectionModel])
     DEPS_AVAILABLE = True
 except ImportError:
     DEPS_AVAILABLE = False
@@ -47,13 +50,13 @@ class ANPRDetector:
         preprocessing_applied = []
         processed = image.copy()
 
-        # Check if low light
+        # Low light check
         brightness = np.mean(cv2.cvtColor(image, cv2.COLOR_RGB2GRAY))
         if brightness < 80:
             processed = enhance_image(processed)
             preprocessing_applied.append("CLAHE Night Enhancement")
 
-        # Run YOLO11 detection
+        # Run YOLO detection
         results = self.model(processed, conf=0.25, iou=0.45)
         annotated = processed.copy()
 
@@ -80,22 +83,50 @@ class ANPRDetector:
         # Draw bounding box
         cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 100), 3)
         label = f"Plate {conf*100:.1f}%"
-        cv2.putText(annotated, label, (x1, y1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 100), 2)
+        cv2.putText(annotated, label, (x1, y1 - 12),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 100), 2)
 
-        # Crop plate
-        plate_crop = image[y1:y2, x1:x2]
+        # ── FIX 1: Padded crop so edges aren't cut off ──────────────────
+        PAD = 12
+        h_img, w_img = image.shape[:2]
+        x1p = max(0, x1 - PAD)
+        y1p = max(0, y1 - PAD)
+        x2p = min(w_img, x2 + PAD)
+        y2p = min(h_img, y2 + PAD)
+        plate_crop = image[y1p:y2p, x1p:x2p]
+
+        # ── FIX 2: Upscale small crops so OCR reads better ───────────────
+        crop_h, crop_w = plate_crop.shape[:2]
+        if crop_w < 200:
+            scale = 200 / crop_w
+            plate_crop = cv2.resize(
+                plate_crop,
+                (int(crop_w * scale), int(crop_h * scale)),
+                interpolation=cv2.INTER_CUBIC
+            )
+            preprocessing_applied.append("Upscaled for OCR")
+
         enhanced_crop = apply_clahe(plate_crop)
         preprocessing_applied.append("Plate Crop Enhancement")
 
-        # OCR
+        # ── FIX 3: Merge ALL OCR text regions left-to-right ─────────────
         plate_text = "N/A"
         ocr_conf = 0.0
         if self.reader:
-            ocr_results = self.reader.readtext(enhanced_crop)
+            ocr_results = self.reader.readtext(
+                enhanced_crop,
+                detail=1,
+                paragraph=False,
+                contrast_ths=0.3,
+                adjust_contrast=0.7,
+                text_threshold=0.6,
+            )
             if ocr_results:
-                best_ocr = max(ocr_results, key=lambda x: x[2])
-                raw_text = best_ocr[1]
-                ocr_conf = best_ocr[2]
+                # Sort detections left to right by x position
+                ocr_results.sort(key=lambda r: r[0][0][0])
+                # Join all detected text pieces
+                raw_text = ''.join([r[1] for r in ocr_results])
+                ocr_conf = sum([r[2] for r in ocr_results]) / len(ocr_results)
                 plate_text = format_plate_text(raw_text)
 
         state = extract_state_from_plate(plate_text)
@@ -136,7 +167,8 @@ class ANPRDetector:
         annotated = image.copy()
         cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 100), 3)
         label = f"Plate {det_conf*100:.1f}%"
-        cv2.putText(annotated, label, (x1, y1 - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 100), 2)
+        cv2.putText(annotated, label, (x1, y1 - 12),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 100), 2)
 
         plate_crop = image[y1:y2, x1:x2]
 
