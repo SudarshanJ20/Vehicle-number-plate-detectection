@@ -1,127 +1,58 @@
-import { CheckCircle, MapPin, Car, Cpu, AlertTriangle, Copy, Check } from 'lucide-react'
 import { useState } from 'react'
+import { Copy, Check, MapPin, Car, Cpu, Download, AlertTriangle } from 'lucide-react'
 import ConfidenceBar from './ConfidenceBar'
-import clsx from 'clsx'
-
 export default function ResultCard({ result, originalUrl }) {
   const [copied, setCopied] = useState(false)
-  const [tab, setTab] = useState('annotated')
-
-  const copy = () => {
-    navigator.clipboard.writeText(result.plate_text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const copy = () => { navigator.clipboard.writeText(result.plate_text); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const dl = () => {
+    const b = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'anpr-' + result.plate_text + '.json'; a.click()
   }
-
-  const isMock = result._mock
-
   return (
-    <div className="animate-slide-up space-y-4">
-      {/* Mock banner */}
-      {isMock && (
-        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-700 dark:text-amber-400 text-xs">
-          <AlertTriangle size={14} />
-          <span><strong>Demo Mode</strong> — Start FastAPI backend for real YOLO11 inference</span>
+    <div className="space-y-4 animate-slide-up">
+      {result._mock && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-xl text-amber-700 dark:text-amber-400 text-xs">
+          <AlertTriangle size={14}/>
+          <span><strong>Demo Mode</strong> — Connect backend with best.pt for real YOLO11 inference</span>
         </div>
       )}
-
-      {/* Plate number hero */}
-      <div className="card p-6 text-center space-y-2">
-        <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-widest font-medium">Detected Plate Number</p>
-        <div className="flex items-center justify-center gap-3">
-          <span className="plate-text text-3xl md:text-4xl font-bold text-brand-600 dark:text-brand-400 tracking-widest">
-            {result.plate_text}
-          </span>
-          <button onClick={copy} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" aria-label="Copy plate number">
-            {copied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} className="text-gray-400" />}
+      <div className="card p-6 text-center">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mb-3">Detected Plate</p>
+        <div className="flex items-center justify-center gap-3 mb-3">
+          <span className="plate-text text-4xl font-black text-teal-700 dark:text-teal-400">{result.plate_text}</span>
+          <button onClick={copy} className={'p-2.5 rounded-xl transition-all ' + (copied ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:text-teal-600')}>
+            {copied ? <Check size={16}/> : <Copy size={16}/>}
           </button>
         </div>
-        <div className="flex items-center justify-center gap-4 pt-1">
-          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <MapPin size={12} />{result.state}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <Car size={12} />{result.plate_type}
-          </span>
-          <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-            <CheckCircle size={12} className="text-emerald-500" />ID: {result.id}
-          </span>
+        <div className="flex items-center justify-center gap-3 flex-wrap mb-4">
+          <span className="flex items-center gap-1.5 badge bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400"><MapPin size={11}/>{result.state}</span>
+          <span className="flex items-center gap-1.5 badge bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"><Car size={11}/>{result.plate_type}</span>
         </div>
+        <button onClick={dl} className="btn-secondary text-xs py-1.5 px-3 mx-auto"><Download size={12}/> Export JSON</button>
       </div>
-
-      {/* Images */}
-      <div className="card overflow-hidden">
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-gray-800">
-          {[
-            { key: 'annotated', label: 'Annotated Result' },
-            { key: 'original',  label: 'Original Image'  },
-            ...(result.plate_crop ? [{ key: 'crop', label: 'Plate Crop' }] : [])
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setTab(key)}
-              className={clsx('px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
-                tab === key
-                  ? 'border-brand-500 text-brand-600 dark:text-brand-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              )}>
-              {label}
-            </button>
-          ))}
+      {originalUrl && (
+        <div className="card overflow-hidden">
+          <div className="p-4 bg-gray-50 dark:bg-gray-950 relative">
+            <img src={originalUrl} alt="Vehicle" className="w-full rounded-xl object-contain max-h-56"/>
+            {result.plate_text && (
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 border-2 border-emerald-400 rounded-lg px-4 py-1.5 bg-black/70 backdrop-blur-sm">
+                <span className="font-mono text-emerald-400 font-bold tracking-widest text-sm">{result.plate_text}</span>
+              </div>
+            )}
+          </div>
         </div>
-
-        <div className="p-4 bg-gray-50 dark:bg-gray-950 min-h-48 flex items-center justify-center">
-          {tab === 'annotated' && (
-            result.annotated_image
-              ? <img src={`data:image/jpeg;base64,${result.annotated_image}`} alt="Annotated detection result" className="max-h-80 rounded-lg object-contain w-full" />
-              : <MockAnnotated originalUrl={originalUrl} bbox={result.bbox} plateText={result.plate_text} />
-          )}
-          {tab === 'original' && originalUrl && (
-            <img src={originalUrl} alt="Original uploaded vehicle" className="max-h-80 rounded-lg object-contain w-full" />
-          )}
-          {tab === 'crop' && result.plate_crop && (
-            <div className="text-center space-y-2">
-              <img src={`data:image/jpeg;base64,${result.plate_crop}`} alt="Cropped plate region" className="max-h-32 rounded-lg object-contain mx-auto border-2 border-brand-500" />
-              <p className="text-xs text-gray-400">Extracted plate region (CLAHE enhanced)</p>
-            </div>
-          )}
-        </div>
+      )}
+      <div className="card p-5 space-y-4">
+        <h3 className="text-sm font-bold flex items-center gap-2"><Cpu size={14} className="text-teal-500"/> Model Confidence</h3>
+        <ConfidenceBar label="Detection (YOLO11)" value={result.detection_confidence}/>
+        <ConfidenceBar label="OCR (EasyOCR)" value={result.ocr_confidence}/>
       </div>
-
-      {/* Confidence metrics */}
-      <div className="card p-5 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <Cpu size={14} className="text-brand-500" />
-          <span className="text-sm font-semibold">Model Confidence</span>
-        </div>
-        <ConfidenceBar label="YOLO11 Detection Confidence" value={result.detection_confidence} />
-        <ConfidenceBar label="EasyOCR Recognition Confidence" value={result.ocr_confidence} />
-      </div>
-
-      {/* Preprocessing */}
       <div className="card p-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Preprocessing Applied</p>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2.5">Preprocessing</p>
         <div className="flex flex-wrap gap-2">
-          {result.preprocessing_applied.map((step, i) => (
-            <span key={i} className="badge bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-400 border border-brand-200 dark:border-brand-800 text-xs px-2 py-0.5 rounded-full">
-              {step}
-            </span>
+          {result.preprocessing_applied?.map((s, i) => (
+            <span key={i} className="badge bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-100 dark:border-teal-900 text-xs">{s}</span>
           ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Canvas-based mock annotated image for demo mode
-function MockAnnotated({ originalUrl, bbox, plateText }) {
-  if (!originalUrl) return <div className="text-gray-400 text-sm">No image preview</div>
-
-  return (
-    <div className="relative inline-block max-h-80">
-      <img src={originalUrl} alt="Vehicle with detection overlay" className="max-h-80 rounded-lg object-contain w-full" />
-      <div className="absolute inset-0 flex items-end justify-center pb-[25%]">
-        <div className="border-2 border-emerald-400 rounded px-3 py-1 bg-black/60 shadow-lg">
-          <span className="font-mono text-emerald-400 text-sm font-bold tracking-widest">{plateText}</span>
         </div>
       </div>
     </div>

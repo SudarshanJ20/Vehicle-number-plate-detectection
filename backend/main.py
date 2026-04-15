@@ -1,93 +1,82 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-import uvicorn
-import uuid
+import base64, uuid, cv2, numpy as np, easyocr, re
+from ultralytics import YOLO
 from datetime import datetime
-from detector import ANPRDetector
-import base64
-import io
-from PIL import Image
-import numpy as np
 
-app = FastAPI(title="ANPR System API", version="1.0.0")
+app = FastAPI(title="ANPR API")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+model  = YOLO("best.pt")
+reader = easyocr.Reader(['en'], gpu=False)
 
-detector = ANPRDetector()
-detection_history = []
+STATE_CODES = {
+    "MH":"Maharashtra","KA":"Karnataka","TN":"Tamil Nadu","DL":"Delhi",
+    "UP":"Uttar Pradesh","GJ":"Gujarat","RJ":"Rajasthan","WB":"West Bengal",
+    "AP":"Andhra Pradesh","TS":"Telangana","KL":"Kerala","MP":"Madhya Pradesh",
+    "PB":"Punjab","HR":"Haryana","BR":"Bihar","OR":"Odisha","AS":"Assam",
+    "HP":"Himachal Pradesh","UK":"Uttarakhand","JK":"Jammu & Kashmir",
+    "GA":"Goa","CH":"Chandigarh","MN":"Manipur","TR":"Tripura",
+    "NL":"Nagaland","MZ":"Mizoram","SK":"Sikkim","AR":"Arunachal Pradesh",
+    "ML":"Meghalaya","CG":"Chhattisgarh","JH":"Jharkhand",
+}
 
-@app.get("/")
-def root():
-    return {"message": "ANPR System API is running", "status": "ok"}
+def clahe(img):
+    lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    cl = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8)).apply(l)
+    return cv2.cvtColor(cv2.merge([cl,a,b]), cv2.COLOR_LAB2BGR)
 
-@app.get("/health")
-def health():
-    return {"status": "healthy", "model_loaded": detector.model_loaded}
+def get_state(plate):
+    m = re.match(r'^([A-Z]{2})', plate.upper())
+    if m:
+        if re.match(r'^\d{2}BH', plate.upper()): return "National (BH)", "BH-Series"
+        st = STATE_CODES.get(m.group(1), "Unknown")
+        return st, "Commercial" if re.search(r'\d[A-Z]{2}\d{4}', plate[4:]) else "Private"
+    return "Unknown", "Unknown"
 
-@app.post("/detect")
-async def detect_plate(file: UploadFile = File(...)):
-    if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image")
-
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents)).convert("RGB")
-    img_array = np.array(image)
-
-    result = detector.detect_and_recognize(img_array)
-
-    # Encode annotated image to base64
-    annotated_pil = Image.fromarray(result["annotated_image"])
-    buffer = io.BytesIO()
-    annotated_pil.save(buffer, format="JPEG", quality=90)
-    annotated_b64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-    # Encode cropped plate to base64 if exists
-    plate_b64 = None
-    if result.get("plate_crop") is not None:
-        plate_pil = Image.fromarray(result["plate_crop"])
-        pbuffer = io.BytesIO()
-        plate_pil.save(pbuffer, format="JPEG", quality=90)
-        plate_b64 = base64.b64encode(pbuffer.getvalue()).decode("utf-8")
-
-    detection_id = str(uuid.uuid4())[:8].upper()
-    timestamp = datetime.now().isoformat()
-
-    record = {
-        "id": detection_id,
-        "timestamp": timestamp,
+@app.post("/api/detect")
+async def detect(file: UploadFile = File(...)):
+    data = await file.read()
+    arr  = np.frombuffer(data, np.uint8)
+    img  = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    enhanced = clahe(img)
+    results  = model(enhanced)
+    plate_text, det_conf, ocr_conf = "NOT DETECTED", 0.0, 0.0
+    plate_crop_b64 = None
+    annotated = img.copy()
+    for r in results:
+        for box in r.boxes:
+            det_conf = float(box.conf[0]) * 100
+            x1,y1,x2,y2 = map(int, box.xyxy[0])
+            crop = img[y1:y2, x1:x2]
+            if crop.size == 0: continue
+            crop = cv2.resize(crop, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+            gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+            _, th  = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
+            ocr_results = reader.readtext(th)
+            if ocr_results:
+                plate_text = ''.join([t[1] for t in ocr_results]).upper().replace(' ','')
+                plate_text = re.sub(r'[^A-Z0-9]', '', plate_text)
+                ocr_conf   = float(ocr_results[0][2]) * 100
+            cv2.rectangle(annotated, (x1,y1), (x2,y2), (0,255,100), 2)
+            cv2.putText(annotated, plate_text, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,100), 2)
+            _, enc = cv2.imencode('.jpg', crop)
+            plate_crop_b64 = base64.b64encode(enc).decode()
+            break
+    _, ann_enc = cv2.imencode('.jpg', annotated)
+    ann_b64 = base64.b64encode(ann_enc).decode()
+    state, plate_type = get_state(plate_text)
+    return {
+        "id": uuid.uuid4().hex[:6].upper(),
+        "plate_text": plate_text,
+        "state": state,
+        "plate_type": plate_type,
+        "detection_confidence": round(det_conf, 2),
+        "ocr_confidence": round(ocr_conf, 2),
+        "annotated_image": ann_b64,
+        "plate_crop": plate_crop_b64,
+        "preprocessing_applied": ["CLAHE Enhancement","Bicubic Upscale","Grayscale + Binarize","Otsu Threshold"],
         "filename": file.filename,
-        "plate_text": result.get("plate_text", "N/A"),
-        "detection_confidence": round(result.get("detection_confidence", 0) * 100, 1),
-        "ocr_confidence": round(result.get("ocr_confidence", 0) * 100, 1),
-        "state": result.get("state", "Unknown"),
-        "plate_type": result.get("plate_type", "Unknown"),
-        "bbox": result.get("bbox", []),
-        "annotated_image": annotated_b64,
-        "plate_crop": plate_b64,
-        "preprocessing_applied": result.get("preprocessing_applied", []),
+        "timestamp": datetime.now().isoformat(),
     }
-
-    detection_history.insert(0, {k: v for k, v in record.items() if k not in ["annotated_image", "plate_crop"]})
-    if len(detection_history) > 50:
-        detection_history.pop()
-
-    return JSONResponse(content=record)
-
-@app.get("/history")
-def get_history():
-    return {"detections": detection_history, "total": len(detection_history)}
-
-@app.delete("/history")
-def clear_history():
-    detection_history.clear()
-    return {"message": "History cleared"}
-
-if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

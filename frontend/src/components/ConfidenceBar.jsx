@@ -1,33 +1,15 @@
-import clsx from 'clsx'
-
-export default function ConfidenceBar({ label, value, color = 'brand' }) {
-  const pct = Math.min(100, Math.max(0, value))
-  const colorMap = {
-    brand:  'bg-brand-500',
-    green:  'bg-emerald-500',
-    amber:  'bg-amber-500',
-    red:    'bg-red-500',
-  }
-  const getColor = (v) => {
-    if (v >= 85) return colorMap.green
-    if (v >= 65) return colorMap.brand
-    if (v >= 45) return colorMap.amber
-    return colorMap.red
-  }
-  const barColor = getColor(pct)
-  const textColor = pct >= 85 ? 'text-emerald-600 dark:text-emerald-400'
-    : pct >= 65 ? 'text-brand-600 dark:text-brand-400'
-    : pct >= 45 ? 'text-amber-600 dark:text-amber-400'
-    : 'text-red-500'
-
+export default function ConfidenceBar({ label, value }) {
+  const pct   = Math.min(100, Math.max(0, parseFloat(value) || 0))
+  const color = pct >= 85 ? 'bg-emerald-500' : pct >= 65 ? 'bg-teal-600' : 'bg-amber-500'
+  const text  = pct >= 85 ? 'text-emerald-500' : pct >= 65 ? 'text-teal-500' : 'text-amber-500'
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between items-center">
+    <div className="space-y-1.5">
+      <div className="flex justify-between">
         <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
-        <span className={clsx('text-xs font-mono font-semibold', textColor)}>{pct.toFixed(1)}%</span>
+        <span className={'text-xs font-mono font-bold ' + text}>{pct.toFixed(1)}%</span>
       </div>
-      <div className="h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-        <div className={clsx('h-full rounded-full conf-bar', barColor)} style={{ width: `${pct}%` }} />
+      <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+        <div className={'h-full rounded-full transition-all duration-1000 ease-out ' + color} style={{ width: pct + '%' }}/>
       </div>
     </div>
   )

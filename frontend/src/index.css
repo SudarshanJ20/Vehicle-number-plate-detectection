@@ -3,61 +3,27 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --scan-color: #01a3a8;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    font-family: 'Inter', system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  * { box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
 }
-
 @layer components {
-  .glass {
-    @apply bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200/60 dark:border-gray-700/60;
-  }
-  .card {
-    @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm;
-  }
-  .btn-primary {
-    @apply bg-brand-600 hover:bg-brand-700 active:bg-brand-800 text-white font-medium px-4 py-2 rounded-lg text-sm transition-all duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-  .btn-ghost {
-    @apply bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium px-3 py-2 rounded-lg text-sm transition-all duration-150 flex items-center gap-2;
-  }
-  .badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
-  }
+  .card { @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm; }
+  .btn-primary { @apply bg-teal-700 hover:bg-teal-800 active:scale-95 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all flex items-center gap-2 disabled:opacity-50; }
+  .btn-secondary { @apply bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-2; }
+  .btn-ghost { @apply hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 p-2 rounded-lg transition-all flex items-center gap-2; }
+  .badge { @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold; }
+  .input { @apply w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all; }
 }
-
-/* Confidence bar animation */
-.conf-bar { transition: width 0.8s cubic-bezier(0.16,1,0.3,1); }
-
-/* Scan line effect */
-.scan-container { position: relative; overflow: hidden; }
-.scan-line {
-  position: absolute; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--scan-color), transparent);
-  animation: scanLine 2s linear infinite;
+.plate-text { font-family: 'JetBrains Mono', monospace; letter-spacing: 0.12em; }
+@keyframes scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(400%); opacity: 0; }
 }
-@keyframes scanLine {
-  0% { top: 0%; opacity: 1; }
-  90% { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
-}
-
-/* Plate number glow */
-.plate-text {
-  font-family: 'JetBrains Mono', monospace;
-  letter-spacing: 0.1em;
-  text-shadow: 0 0 20px rgba(1, 163, 168, 0.3);
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 9999px; }
-.dark ::-webkit-scrollbar-thumb { background: #374151; }
+.scan-beam { background: linear-gradient(180deg, transparent, rgba(1,163,168,0.6), transparent); animation: scan 2s ease-in-out infinite; }
+@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+.animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1) both; }
+.animate-fade-in  { animation: fadeIn 0.3s ease both; }
+.toast { @apply fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-medium; }

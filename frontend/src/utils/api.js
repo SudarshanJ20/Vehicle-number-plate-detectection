@@ -1,18 +1,8 @@
-import axios from 'axios'
-
-const BASE = import.meta.env.VITE_API_URL || '/api'
-
-const client = axios.create({ baseURL: BASE, timeout: 30000 })
-
-export const detectPlate = async (file) => {
+const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+export async function detectPlate(file) {
   const form = new FormData()
   form.append('file', file)
-  const res = await client.post('/detect', form, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-  return res.data
+  const res = await fetch(BASE + '/api/detect', { method: 'POST', body: form })
+  if (!res.ok) throw new Error('API error: ' + res.status)
+  return res.json()
 }
-
-export const getHistory  = async () => (await client.get('/history')).data
-export const clearHistory = async () => (await client.delete('/history')).data
-export const getHealth   = async () => (await client.get('/health')).data
