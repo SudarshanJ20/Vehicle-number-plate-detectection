@@ -16,3 +16,17 @@ frontend/.env.local
 # Model (too large for git)
 backend/best.pt
 ml-api/best.pt
+
+# Virtual environments
+ml-api/venv/
+backend/venv/
+venv/
+env/
+
+# Large model files
+*.pyd
+*.dll
+*.so
+
+# Node modules
+frontend/node_modules/
