@@ -6,6 +6,7 @@ import DetectPage from './pages/DetectPage'
 import DashboardPage from './pages/DashboardPage'
 import HistoryPage from './pages/HistoryPage'
 import AboutPage from './pages/AboutPage'
+import AuthPage from './pages/AuthPage'
 
 export default function App() {
   const [history, setHistory] = useState([])
@@ -18,6 +19,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/auth" element={<AuthPage />} />
         <Route path="/detect" element={<DetectPage addToHistory={addToHistory} />} />
         <Route path="/dashboard" element={<DashboardPage history={history} />} />
         <Route path="/history" element={<HistoryPage history={history} />} />
