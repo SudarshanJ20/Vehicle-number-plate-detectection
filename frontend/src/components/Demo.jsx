@@ -1,3 +1,5 @@
+import { useAuth } from '../context/AuthContext'
+import { saveDetection } from '../firebase/detections'
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { ImagePlus, ScanLine, RotateCcw, CheckCircle2, WifiOff } from 'lucide-react'
