@@ -30,3 +30,5 @@ env/
 
 # Node modules
 frontend/node_modules/
+
+ml-api/.env
