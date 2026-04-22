@@ -1,162 +1,262 @@
-import { BarChart2, TrendingUp, MapPin, Car, Target } from 'lucide-react'
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts'
+import { useEffect, useState, useMemo } from 'react';
+import { BarChart2, TrendingUp, MapPin, Car, Target, Activity, Zap, PieChart as PieIcon } from 'lucide-react';
+import {
+  PieChart, Pie, Cell, AreaChart, Area,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend
+} from 'recharts';
+import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { getUserDetections } from '../firebase/detections';
 
-const COLORS = ['#01696f','#4dbfc4','#0c4e54','#7dd9dc','#afeaec','#01a3a8','#0f3638']
+const COLORS = ['#6366f1', '#06b6d4', '#8b5cf6', '#10b981', '#f43f5e', '#f59e0b', '#3b82f6'];
 
-export default function DashboardPage({ history }) {
-  const total = history.length
-  const avgDet = total ? (history.reduce((a, r) => a + (parseFloat(r.detection_confidence) || 0), 0) / total) : 0
-  const avgOCR = total ? (history.reduce((a, r) => a + (parseFloat(r.ocr_confidence) || 0), 0) / total) : 0
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+};
 
-  // State frequency
-  const stateCounts = {}
-  history.forEach(r => { if (r.state) stateCounts[r.state] = (stateCounts[r.state] || 0) + 1 })
-  const stateData = Object.entries(stateCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value)
+const itemVariant = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } }
+};
 
-  // Plate type counts
-  const typeCounts = {}
-  history.forEach(r => { if (r.plate_type) typeCounts[r.plate_type] = (typeCounts[r.plate_type] || 0) + 1 })
-  const typeData = Object.entries(typeCounts).map(([name, value]) => ({ name, value }))
+export default function DashboardPage() {
+  const { user } = useAuth();
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Confidence trend (last 10)
-  const trendData = history.slice(0, 10).reverse().map((r, i) => ({
-    name: `#${i + 1}`,
-    Detection: parseFloat(r.detection_confidence)?.toFixed(1),
-    OCR: parseFloat(r.ocr_confidence)?.toFixed(1),
-  }))
+  useEffect(() => {
+    if (!user) return;
+    getUserDetections(user.uid, 500)
+      .then(data => {
+        setHistory(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [user]);
 
-  if (total === 0) return <EmptyDashboard />
+  // --- Data Aggregation ---
+  const { total, avgDet, avgOCR, stateData, typeData, trendData } = useMemo(() => {
+    const t = history.length;
+    if (t === 0) return { total: 0 };
+
+    const avgD = history.reduce((a, r) => a + (parseFloat(r.detectionConfidence) || 0), 0) / t;
+    const avgO = history.reduce((a, r) => a + (parseFloat(r.ocrConfidence) || 0), 0) / t;
+
+    const sCounts = {};
+    const tCounts = {};
+    history.forEach(r => {
+      if (r.state) sCounts[r.state] = (sCounts[r.state] || 0) + 1;
+      if (r.plateType) tCounts[r.plateType] = (tCounts[r.plateType] || 0) + 1;
+    });
+
+    const sData = Object.entries(sCounts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const tData = Object.entries(tCounts).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+    const trData = history.slice(0, 15).reverse().map((r, i) => ({
+      name: `#${i + 1}`,
+      Detection: parseFloat(r.detectionConfidence?.toFixed?.(1)) || 0,
+      OCR: parseFloat(r.ocrConfidence?.toFixed?.(1)) || 0,
+    }));
+
+    return { total: t, avgDet: avgD, avgOCR: avgO, stateData: sData, typeData: tData, trendData: trData };
+  }, [history]);
+
+  // --- Render States ---
+  if (loading) return <DashboardSkeleton />;
+  if (total === 0) return <EmptyDashboard />;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          <BarChart2 size={20} className="text-brand-500" /> Analytics Dashboard
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Performance metrics from {total} detection{total !== 1 ? 's' : ''} this session</p>
-      </div>
+    <div className="min-h-screen bg-[#09090b] text-slate-300 font-sans overflow-hidden relative selection:bg-indigo-500/30">
+      
+      {/* Ambient Background Glows */}
+      <div className="absolute top-[-10%] left-[10%] w-[40%] h-[40%] rounded-full bg-indigo-600/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] rounded-full bg-cyan-600/10 blur-[120px] pointer-events-none" />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard icon={Target} label="Total Detections" value={total} unit="" color="brand" />
-        <KPICard icon={TrendingUp} label="Avg Detection Conf" value={avgDet.toFixed(1)} unit="%" color="emerald" />
-        <KPICard icon={TrendingUp} label="Avg OCR Conf" value={avgOCR.toFixed(1)} unit="%" color="teal" />
-        <KPICard icon={MapPin} label="Unique States" value={Object.keys(stateCounts).length} unit="" color="purple" />
-      </div>
+      <div className="max-w-[1600px] mx-auto px-6 py-10 md:p-12 relative z-10 space-y-8">
 
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Confidence Trend */}
-        <div className="card p-5 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <TrendingUp size={14} className="text-brand-500" /> Confidence Trend
-          </h2>
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={trendData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-800" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
-              <Tooltip formatter={(v) => `${v}%`} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="Detection" stroke="#01696f" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="OCR" stroke="#4dbfc4" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="4 2" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* State breakdown */}
-        <div className="card p-5 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <MapPin size={14} className="text-brand-500" /> State Breakdown
-          </h2>
-          {stateData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={stateData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, percent }) => `${name} ${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={11}>
-                  {stateData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Pie>
-                <Tooltip formatter={(v) => [`${v} detection${v !== 1 ? 's' : ''}`, 'Count']} />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : <p className="text-sm text-gray-400">No state data</p>}
-        </div>
-      </div>
-
-      {/* Plate type + Top states table */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Plate types */}
-        <div className="card p-5 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <Car size={14} className="text-brand-500" /> Plate Types Detected
-          </h2>
-          <div className="space-y-2">
-            {typeData.map(({ name, value }) => (
-              <div key={name} className="flex items-center gap-3">
-                <span className="text-xs text-gray-600 dark:text-gray-300 w-32 truncate">{name}</span>
-                <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-500 rounded-full transition-all duration-700"
-                    style={{ width: `${(value / total) * 100}%` }} />
-                </div>
-                <span className="text-xs font-mono font-semibold text-gray-500 w-6 text-right tabular-nums">{value}</span>
-              </div>
-            ))}
+        {/* Dashboard Header */}
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-widest uppercase mb-4">
+            <Activity size={12} className="animate-pulse" /> Telemetry
           </div>
-        </div>
+          <h1 className="text-3xl md:text-5xl font-extrabold text-white tracking-tight">Analytics Engine</h1>
+          <p className="text-sm text-slate-400 mt-2">Real-time performance metrics compiled from {total} processed images.</p>
+        </motion.div>
 
-        {/* Top states */}
-        <div className="card p-5 space-y-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <MapPin size={14} className="text-brand-500" /> Top States
-          </h2>
-          <div className="space-y-2">
-            {stateData.slice(0, 6).map(({ name, value }, i) => (
-              <div key={name} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ background: COLORS[i % COLORS.length] }}>{i + 1}</span>
-                  <span className="text-gray-700 dark:text-gray-300 text-xs">{name}</span>
+        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          
+          {/* --- KPI Row --- */}
+          {[
+            { icon: Target, label: 'Total Volume', value: total, color: 'text-indigo-400', bg: 'bg-indigo-500/10', border: 'group-hover:border-indigo-500/30', glow: 'group-hover:shadow-[0_0_30px_-5px_rgba(99,102,241,0.2)]' },
+            { icon: Zap, label: 'Detection Accuracy', value: `${avgDet.toFixed(1)}%`, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'group-hover:border-emerald-500/30', glow: 'group-hover:shadow-[0_0_30px_-5px_rgba(16,185,129,0.2)]' },
+            { icon: Activity, label: 'OCR Confidence', value: `${avgOCR.toFixed(1)}%`, color: 'text-cyan-400', bg: 'bg-cyan-500/10', border: 'group-hover:border-cyan-500/30', glow: 'group-hover:shadow-[0_0_30px_-5px_rgba(6,182,212,0.2)]' },
+            { icon: MapPin, label: 'Geographic Span', value: stateData.length, color: 'text-violet-400', bg: 'bg-violet-500/10', border: 'group-hover:border-violet-500/30', glow: 'group-hover:shadow-[0_0_30px_-5px_rgba(139,92,246,0.2)]' },
+          ].map((kpi, i) => (
+            <motion.div key={i} variants={itemVariant} className={`group relative p-6 rounded-3xl bg-white/[0.01] border border-white/[0.05] backdrop-blur-xl transition-all duration-300 ${kpi.border} ${kpi.glow}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 rounded-3xl transition-opacity" />
+              <div className="relative z-10 flex items-start justify-between">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-1">{kpi.label}</p>
+                  <p className="text-3xl font-extrabold text-white tabular-nums tracking-tight">{kpi.value}</p>
                 </div>
-                <span className="font-mono font-semibold text-xs tabular-nums text-gray-500">{value} plate{value !== 1 ? 's' : ''}</span>
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${kpi.bg} ${kpi.color}`}>
+                  <kpi.icon size={22} />
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </motion.div>
+          ))}
+
+          {/* --- Main Area Chart (Spans 2 columns on XL) --- */}
+          <motion.div variants={itemVariant} className="xl:col-span-2 md:col-span-2 p-6 rounded-3xl bg-white/[0.01] border border-white/[0.05] backdrop-blur-xl flex flex-col">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+                <TrendingUp size={16} className="text-indigo-400" /> Confidence Volatility
+              </h2>
+              <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.05] text-slate-400">
+                Last {trendData.length} scans
+              </span>
+            </div>
+            
+            <div className="flex-1 min-h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorDet" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                    </linearGradient>
+                    <linearGradient id="colorOcr" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#06b6d4" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} dy={10} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <Tooltip 
+                    contentStyle={{ background: 'rgba(24,24,27,0.8)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', color: '#f8fafc' }}
+                    itemStyle={{ fontSize: '13px', fontWeight: 600 }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                  <Area type="monotone" dataKey="Detection" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorDet)" activeDot={{ r: 6, fill: '#6366f1', stroke: '#09090b', strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="OCR" stroke="#06b6d4" strokeWidth={3} fillOpacity={1} fill="url(#colorOcr)" activeDot={{ r: 6, fill: '#06b6d4', stroke: '#09090b', strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* --- Plate Types Progress Bars --- */}
+          <motion.div variants={itemVariant} className="xl:col-span-2 md:col-span-2 p-6 rounded-3xl bg-white/[0.01] border border-white/[0.05] backdrop-blur-xl flex flex-col">
+            <h2 className="text-sm font-semibold text-white mb-6 flex items-center gap-2">
+              <Car size={16} className="text-indigo-400" /> Plate Classification
+            </h2>
+            <div className="flex-1 flex flex-col justify-center space-y-5">
+              {typeData.length > 0 ? typeData.map(({ name, value }) => (
+                <div key={name} className="group">
+                  <div className="flex justify-between items-end mb-2">
+                    <span className="text-sm font-medium text-slate-300">{name || 'Unknown'}</span>
+                    <span className="text-xs font-mono font-bold text-slate-500 bg-white/[0.03] px-2 py-0.5 rounded border border-white/[0.05] group-hover:text-indigo-400 transition-colors">
+                      {value} <span className="font-sans font-normal opacity-70">plates</span>
+                    </span>
+                  </div>
+                  <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.02]">
+                    <motion.div
+                      initial={{ width: 0 }} animate={{ width: `${(value / total) * 100}%` }} transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.5)]"
+                    />
+                  </div>
+                </div>
+              )) : <div className="text-slate-500 text-sm text-center">No classifications available</div>}
+            </div>
+          </motion.div>
+
+          {/* --- State Breakdown (Donut Chart) --- */}
+          <motion.div variants={itemVariant} className="xl:col-span-2 md:col-span-1 p-6 rounded-3xl bg-white/[0.01] border border-white/[0.05] backdrop-blur-xl flex flex-col items-center justify-center relative min-h-[300px]">
+            <h2 className="text-sm font-semibold text-white absolute top-6 left-6 flex items-center gap-2">
+              <PieIcon size={16} className="text-indigo-400" /> State Distribution
+            </h2>
+            {stateData.length > 0 ? (
+              <div className="w-full h-[220px] mt-8">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={stateData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={3} dataKey="value" stroke="none">
+                      {stateData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} className="hover:opacity-80 transition-opacity outline-none" />)}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(v) => [`${v} detections`, 'Volume']}
+                      contentStyle={{ background: 'rgba(24,24,27,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : <p className="text-sm text-slate-500">No geographical data</p>}
+          </motion.div>
+
+          {/* --- Top States List --- */}
+          <motion.div variants={itemVariant} className="xl:col-span-2 md:col-span-1 p-6 rounded-3xl bg-white/[0.01] border border-white/[0.05] backdrop-blur-xl">
+            <h2 className="text-sm font-semibold text-white mb-6 flex items-center gap-2">
+              <MapPin size={16} className="text-indigo-400" /> Geographic Leaders
+            </h2>
+            <div className="space-y-3">
+              {stateData.slice(0, 5).map(({ name, value }, i) => (
+                <div key={name} className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.02] border border-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[11px] font-bold shadow-lg" style={{ backgroundColor: `${COLORS[i % COLORS.length]}20`, color: COLORS[i % COLORS.length] }}>
+                      #{i + 1}
+                    </div>
+                    <span className="text-slate-200 font-medium">{name || 'Unidentified'}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono text-sm font-bold text-white">{value}</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">Plates</p>
+                  </div>
+                </div>
+              ))}
+              {stateData.length === 0 && <p className="text-sm text-slate-500 text-center py-4">No data to display</p>}
+            </div>
+          </motion.div>
+
+        </motion.div>
       </div>
     </div>
-  )
+  );
 }
 
-function KPICard({ icon: Icon, label, value, unit, color }) {
-  const colorMap = {
-    brand:   'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/30',
-    emerald: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30',
-    teal:    'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30',
-    purple:  'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30',
-  }
+// --- Helper Components ---
+
+function DashboardSkeleton() {
   return (
-    <div className="card p-4 space-y-2 animate-slide-up">
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorMap[color]}`}>
-        <Icon size={15} />
+    <div className="min-h-screen bg-[#09090b] p-6 md:p-12 max-w-[1600px] mx-auto space-y-8">
+      <div className="w-48 h-8 bg-white/5 rounded-lg animate-pulse mb-2" />
+      <div className="w-96 h-4 bg-white/5 rounded-full animate-pulse" />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-8">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-32 rounded-3xl bg-white/[0.02] border border-white/[0.05] animate-pulse" />
+        ))}
+        <div className="xl:col-span-2 md:col-span-2 h-80 rounded-3xl bg-white/[0.02] border border-white/[0.05] animate-pulse" />
+        <div className="xl:col-span-2 md:col-span-2 h-80 rounded-3xl bg-white/[0.02] border border-white/[0.05] animate-pulse" />
       </div>
-      <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">{value}<span className="text-base font-normal text-gray-400">{unit}</span></p>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
     </div>
-  )
+  );
 }
 
 function EmptyDashboard() {
   return (
-    <div className="space-y-5">
-      <h1 className="text-xl font-bold flex items-center gap-2">
-        <BarChart2 size={20} className="text-brand-500" /> Analytics Dashboard
-      </h1>
-      <div className="card py-20 flex flex-col items-center gap-3 text-center">
-        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center">
-          <BarChart2 size={20} className="text-gray-300 dark:text-gray-600" />
+    <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center text-center px-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-indigo-500/5 blur-[150px] rounded-full pointer-events-none" />
+      
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative z-10">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-3xl bg-[#161625] border border-white/10 flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+          <BarChart2 size={40} className="text-indigo-400" />
         </div>
-        <p className="font-semibold text-gray-700 dark:text-gray-300 text-sm">No data yet</p>
-        <p className="text-xs text-gray-400 max-w-xs">Run some detections first — analytics will populate automatically.</p>
-      </div>
+        <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 tracking-tight">Awaiting Telemetry</h2>
+        <p className="text-slate-400 max-w-md mx-auto leading-relaxed">
+          Your dashboard is currently empty. Run your first vehicle detection scan to start populating this intelligence matrix.
+        </p>
+      </motion.div>
     </div>
-  )
+  );
 }

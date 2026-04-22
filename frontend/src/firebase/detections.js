@@ -25,9 +25,8 @@ export const saveDetection = async (userId, detectionData) => {
     filename,
   } = detectionData;
 
-  // Save to detections collection
   const docRef = await addDoc(collection(db, "detections"), {
-    userId,
+    userId,           // ✅ consistent field name
     plateText,
     state,
     plateType,
@@ -37,7 +36,6 @@ export const saveDetection = async (userId, detectionData) => {
     createdAt: serverTimestamp(),
   });
 
-  // Increment user's total detection count
   await updateDoc(doc(db, "users", userId), {
     totalDetections: increment(1),
   });
@@ -49,7 +47,7 @@ export const saveDetection = async (userId, detectionData) => {
 export const getUserDetections = async (userId, limitCount = 50) => {
   const q = query(
     collection(db, "detections"),
-    where("userId", "==", userId),
+    where("userId", "==", userId),   // ✅ fixed: was 'uid', now 'userId'
     orderBy("createdAt", "desc"),
     limit(limitCount)
   );
@@ -60,6 +58,11 @@ export const getUserDetections = async (userId, limitCount = 50) => {
     ...doc.data(),
     createdAt: doc.data().createdAt?.toDate?.() || new Date(),
   }));
+};
+
+// ── Get Detections for History page ──────────────────────────────────────────
+export const getDetections = async (userId) => {
+  return getUserDetections(userId, 50);  // ✅ reuses getUserDetections, no duplication
 };
 
 // ── Get User Stats ────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 
 const AuthContext = createContext(null);
@@ -15,6 +15,13 @@ export const AuthProvider = ({ children }) => {
     });
     return unsubscribe;
   }, []);
+
+  // ✅ Sign out when browser tab/window is closed
+  useEffect(() => {
+    const handleUnload = () => signOut(auth)
+    window.addEventListener('beforeunload', handleUnload)
+    return () => window.removeEventListener('beforeunload', handleUnload)
+  }, [])
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
