@@ -1,100 +1,99 @@
-import { useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
-import { Upload, PlayCircle } from 'lucide-react'
-
-const PLATES = ['KA 05 MN 2341','MH 12 AB 4567','DL 4C BG 8821','TN 09 F 3310','GJ 01 EX 5002','RJ 14 SA 0092','UP 32 CT 7711']
-
-function FloatingPlates() {
-  const ref = useRef(null)
-  useEffect(() => {
-    const container = ref.current
-    function spawn() {
-      const el = document.createElement('div')
-      el.textContent = PLATES[Math.floor(Math.random() * PLATES.length)]
-      const dur = 14 + Math.random() * 10
-      Object.assign(el.style, {
-        position: 'absolute',
-        left: (Math.random() * 92) + '%',
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(99,102,241,0.12)',
-        borderRadius: '6px',
-        padding: '4px 12px',
-        fontFamily: '"Geist Mono", monospace',
-        fontSize: '0.68rem',
-        fontWeight: '600',
-        color: 'rgba(99,102,241,0.35)',
-        letterSpacing: '0.1em',
-        animation: `floatPlate ${dur}s linear`,
-        animationDelay: `-${Math.random() * dur}s`,
-        pointerEvents: 'none',
-      })
-      container.appendChild(el)
-      setTimeout(() => { if (container.contains(el)) container.removeChild(el) }, dur * 1000)
-    }
-    for (let i = 0; i < 8; i++) setTimeout(spawn, i * 500)
-    const id = setInterval(spawn, 2500)
-    return () => clearInterval(id)
-  }, [])
-  return <div ref={ref} className="absolute inset-0 overflow-hidden pointer-events-none" />
-}
-
-const stats = [
-  { num: '98.4%', label: 'Detection Accuracy' },
-  { num: '<80ms', label: 'Processing Time'    },
-  { num: '50+',   label: 'Plate Formats'      },
-  { num: '24/7',  label: 'Live Detection'     },
-]
+// src/components/Hero.jsx
+import { motion } from 'framer-motion';
+import { Play, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Hero() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden px-6 pt-28 pb-20 text-center">
-      <div className="absolute inset-0" style={{
-        background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99,102,241,0.18) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 80% 60%, rgba(34,211,238,0.08) 0%, transparent 50%)'
-      }} />
-      <div className="absolute inset-0 hero-grid" />
-      <FloatingPlates />
+    <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden transition-colors duration-500">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none" />
+      
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12 relative z-10">
+        <div className="flex flex-col items-center text-center">
+          
+          {/* Top Badge */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.08] shadow-sm mb-8"
+          >
+            <span className="flex h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-400">
+              YOLO11 Powered ANPR Engine
+            </span>
+          </motion.div>
 
-      <div className="relative z-10 max-w-4xl mx-auto">
-        <motion.div initial={{ opacity:0, y:-16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.7, ease:[0.16,1,0.3,1] }}
-          className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-4 py-1.5 text-xs font-bold text-indigo-300 uppercase tracking-widest mb-7">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 pulse-dot" style={{ boxShadow:'0 0 8px #22d3ee' }} />
-          Powered by Deep Learning
-        </motion.div>
+          {/* Main Heading */}
+          <motion.h1 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight text-slate-900 dark:text-white mb-8 leading-[0.95]"
+          >
+            Intelligence for <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500 dark:from-indigo-400 dark:to-cyan-400">
+              Indian Roads
+            </span>
+          </motion.h1>
 
-        <motion.h1 initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, delay:0.1, ease:[0.16,1,0.3,1] }}
-          className="text-5xl md:text-7xl font-black tracking-tight leading-[1.05] text-white mb-6">
-          AI Vehicle Number<br />
-          <span className="gradient-text">Plate Detection</span>
-        </motion.h1>
+          {/* Description */}
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="max-w-2xl text-lg md:text-xl text-slate-600 dark:text-slate-400 leading-relaxed mb-12"
+          >
+            A high-performance Automatic Number Plate Recognition system designed for high-speed traffic, low-light conditions, and diverse Indian plate formats.
+          </motion.p>
 
-        <motion.p initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, delay:0.2, ease:[0.16,1,0.3,1] }}
-          className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-          Detect and decode vehicle license plates in milliseconds using our state-of-the-art ML model.
-          Supports multi-format plates, real-time video streams, and 98%+ accuracy across all lighting conditions.
-        </motion.p>
+          {/* CTAs */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="flex flex-col sm:flex-row items-center gap-4"
+          >
+            <Link 
+              to="/detect" 
+              className="group flex items-center gap-2 bg-slate-900 dark:bg-indigo-500 hover:bg-slate-800 dark:hover:bg-indigo-400 text-white font-bold px-8 py-4 rounded-2xl transition-all shadow-xl dark:shadow-[0_0_30px_rgba(99,102,241,0.3)]"
+            >
+              Launch Scanner <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <a 
+              href="#how-it-works" 
+              className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
+            >
+              <Play size={16} fill="currentColor" /> Watch Logic
+            </a>
+          </motion.div>
 
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, delay:0.3, ease:[0.16,1,0.3,1] }}
-          className="flex items-center justify-center gap-3 flex-wrap">
-          <motion.a href="#demo" whileHover={{ y:-2, boxShadow:'0 0 50px rgba(99,102,241,0.5)' }} whileTap={{ y:0 }}
-            className="inline-flex items-center gap-2 bg-indigo-500 text-white font-bold text-base px-7 py-3.5 rounded-xl no-underline glow-primary">
-            <Upload size={16} /> Try Demo
-          </motion.a>
-          <motion.a href="#how-it-works" whileHover={{ y:-1 }}
-            className="inline-flex items-center gap-2 glass text-slate-400 hover:text-white font-semibold text-base px-6 py-3.5 rounded-xl no-underline transition-colors">
-            <PlayCircle size={16} /> See How it Works
-          </motion.a>
-        </motion.div>
-
-        <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.8, delay:0.45, ease:[0.16,1,0.3,1] }}
-          className="flex items-center justify-center gap-10 md:gap-16 mt-16 pt-10 border-t border-white/[0.06] flex-wrap">
-          {stats.map(s => (
-            <div key={s.label} className="text-center">
-              <div className="text-3xl md:text-4xl font-extrabold tracking-tight gradient-text leading-none">{s.num}</div>
-              <div className="text-xs text-slate-500 mt-1.5 font-semibold uppercase tracking-widest">{s.label}</div>
+          {/* Social Proof / Stats */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-20 grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-16 border-t border-slate-200 dark:border-white/[0.05] pt-12"
+          >
+            <div className="text-center md:text-left">
+              <p className="flex items-center justify-center md:justify-start gap-2 text-2xl font-black text-slate-900 dark:text-white">
+                <Zap size={20} className="text-indigo-500" /> &lt;80ms
+              </p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Inference Latency</p>
             </div>
-          ))}
-        </motion.div>
+            <div className="text-center md:text-left">
+              <p className="flex items-center justify-center md:justify-start gap-2 text-2xl font-black text-slate-900 dark:text-white">
+                <ShieldCheck size={20} className="text-cyan-500" /> 98.4%
+              </p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Detection Accuracy</p>
+            </div>
+            <div className="text-center md:text-left col-span-2 md:col-span-1">
+              <p className="text-2xl font-black text-slate-900 dark:text-white">YOLO11</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Latest SOTA Model</p>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
-  )
+  );
 }

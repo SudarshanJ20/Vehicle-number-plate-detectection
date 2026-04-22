@@ -6,8 +6,9 @@ import DashboardPage from './pages/DashboardPage'
 import HistoryPage from './pages/HistoryPage'
 import AboutPage from './pages/AboutPage'
 import AuthPage from './pages/AuthPage'
-import ProtectedRoute from './components/ProtectedRoute'
 import ProfilePage from './pages/ProfilePage'
+
+import ProtectedRoute from './components/ProtectedRoute'
 
 export default function App() {
   return (
@@ -18,19 +19,38 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
 
         {/* 🔒 Protected */}
-        <Route path="/detect" element={
-          <ProtectedRoute><DetectPage /></ProtectedRoute>
-        } />
-        <Route path="/dashboard" element={
-          <ProtectedRoute><DashboardPage /></ProtectedRoute>
-        } />
-        <Route path="/history" element={
-          <ProtectedRoute><HistoryPage /></ProtectedRoute>
-        } />
-        import ProfilePage from './pages/ProfilePage'
-        <Route path="/profile" element={
-        <ProtectedRoute><ProfilePage /></ProtectedRoute>
-} />
+        <Route
+          path="/detect"
+          element={
+            <ProtectedRoute>
+              <DetectPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute>
+              <HistoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { UserCircle2, Mail, Calendar, Target, LogOut, ShieldCheck } from 'lucide-react'
+import { UserCircle2, Mail, Calendar, Target, LogOut, ShieldCheck, Fingerprint, Award } from 'lucide-react'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase/firebase'
 import { useAuth } from '../context/AuthContext'
@@ -31,94 +31,125 @@ export default function ProfilePage() {
   }) || '—'
 
   if (loading) return (
-    <div className="min-h-screen bg-[#0f0f1a] flex items-center justify-center">
-      <div className="w-6 h-6 border-2 border-white/10 border-t-indigo-400 rounded-full animate-spin" />
+    <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4 transition-colors duration-500">
+      <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+      <p className="text-xs font-bold tracking-widest uppercase text-slate-500 animate-pulse">Syncing Profile</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#0f0f1a] px-6 py-10">
-      <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-[1000px] mx-auto px-6 py-10 md:py-16 relative transition-colors duration-500">
+      
+      {/* Background Ambient Glow */}
+      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-indigo-500/5 dark:bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-        {/* Header */}
+      <div className="space-y-8 relative z-10">
+        
+        {/* Header Section */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <p className="text-xs font-bold tracking-[0.1em] uppercase text-indigo-400 mb-2">▶ Account</p>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">Profile</h1>
-          <p className="text-slate-500 text-sm mt-1">Your account details and stats</p>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-100 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-semibold tracking-widest uppercase mb-4">
+            <Fingerprint size={12} /> Account Identity
+          </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight transition-colors">Personal Dashboard</h1>
         </motion.div>
 
-        {/* Avatar + Name card */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="rounded-2xl border border-white/[0.10] bg-[#161625] p-6 flex items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
-            {user?.photoURL ? (
-              <img src={user.photoURL} alt="avatar" className="w-full h-full rounded-2xl object-cover" />
-            ) : (
-              <UserCircle2 size={32} className="text-indigo-400" />
-            )}
+        {/* Main Profile Card (Centered Avatar) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          className="rounded-[2.5rem] border border-slate-200 dark:border-white/[0.05] bg-white dark:bg-[#161625] p-8 md:p-12 shadow-sm dark:shadow-none transition-all duration-500 flex flex-col items-center text-center"
+        >
+          <div className="relative mb-6">
+             <div className="absolute inset-0 bg-indigo-500/20 dark:bg-indigo-500/30 blur-2xl rounded-full" />
+             <div className="w-24 h-24 md:w-32 md:h-32 rounded-3xl bg-slate-50 dark:bg-[#0a0a12] border-4 border-white dark:border-white/5 flex items-center justify-center shrink-0 relative overflow-hidden shadow-xl">
+               {user?.photoURL ? (
+                 <img src={user.photoURL} alt="avatar" className="w-full h-full object-cover" />
+               ) : (
+                 <UserCircle2 size={64} className="text-indigo-500 dark:text-indigo-400 opacity-80" />
+               )}
+             </div>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">{profile?.name || user?.displayName || 'User'}</h2>
-            <div className="flex items-center gap-1.5 mt-1">
-              <ShieldCheck size={13} className="text-emerald-400" />
-              <span className="text-xs text-emerald-400 font-medium capitalize">{profile?.plan || 'free'} plan</span>
-            </div>
+
+          <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white transition-colors">
+            {profile?.name || user?.displayName || 'User'}
+          </h2>
+          
+          <div className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-widest transition-colors">
+            <Award size={14} /> {profile?.plan || 'Standard'} Tier
           </div>
         </motion.div>
 
-        {/* Info cards */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-          <div className="rounded-2xl border border-white/[0.10] bg-[#161625] p-5 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-              <Mail size={15} className="text-indigo-400" />
+        {/* Stats & Info Bento Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          
+          {/* Email Info */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+            className="rounded-3xl border border-slate-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] p-6 flex items-center gap-5 transition-all"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 transition-colors">
+              <Mail size={20} />
             </div>
             <div className="min-w-0">
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Email</p>
-              <p className="text-sm text-white font-medium truncate">{profile?.email || user?.email || '—'}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Authenticated Email</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{profile?.email || user?.email || '—'}</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="rounded-2xl border border-white/[0.10] bg-[#161625] p-5 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
-              <Calendar size={15} className="text-cyan-400" />
+          {/* Joined Date */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
+            className="rounded-3xl border border-slate-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] p-6 flex items-center gap-5 transition-all"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 transition-colors">
+              <Calendar size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Joined</p>
-              <p className="text-sm text-white font-medium">{joinedDate}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Member Since</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{joinedDate}</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="rounded-2xl border border-white/[0.10] bg-[#161625] p-5 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <Target size={15} className="text-emerald-400" />
+          {/* Activity Stat */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
+            className="rounded-3xl border border-slate-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] p-6 flex items-center gap-5 transition-all"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 transition-colors">
+              <Target size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Total Detections</p>
-              <p className="text-2xl font-bold text-white tabular-nums">{profile?.totalDetections ?? 0}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Total Plate Extractions</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums transition-colors">{profile?.totalDetections ?? 0}</p>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="rounded-2xl border border-white/[0.10] bg-[#161625] p-5 flex items-center gap-4">
-            <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
-              <ShieldCheck size={15} className="text-violet-400" />
+          {/* Provider Type */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
+            className="rounded-3xl border border-slate-200 dark:border-white/[0.05] bg-white dark:bg-white/[0.01] p-6 flex items-center gap-5 transition-all"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center shrink-0 transition-colors">
+              <ShieldCheck size={20} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 uppercase tracking-wider mb-0.5">Account Type</p>
-              <p className="text-sm text-white font-medium capitalize">{user?.providerData?.[0]?.providerId === 'google.com' ? 'Google' : 'Email & Password'}</p>
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">Auth Strategy</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">
+                {user?.providerData?.[0]?.providerId === 'google.com' ? 'Google SSO' : 'Cloud Password'}
+              </p>
             </div>
-          </div>
+          </motion.div>
+        </div>
 
-        </motion.div>
-
-        {/* Logout button */}
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        {/* Action Bar */}
+        <motion.div 
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          className="pt-4"
+        >
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border border-red-500/20 bg-red-500/[0.06] text-red-400 hover:bg-red-500/[0.12] hover:border-red-500/30 font-semibold text-sm transition-all"
+            className="group w-full flex items-center justify-center gap-3 py-5 rounded-[2rem] border border-rose-200 dark:border-rose-500/20 bg-white dark:bg-rose-500/[0.03] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:border-rose-300 dark:hover:border-rose-500/40 font-bold text-sm transition-all duration-300 shadow-sm dark:shadow-none"
           >
-            <LogOut size={15} /> Sign Out
+            <LogOut size={18} className="group-hover:-translate-x-1 transition-transform" /> Sign Out from Infrastructure
           </button>
         </motion.div>
 
