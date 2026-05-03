@@ -18,7 +18,7 @@ const features = [
     bg: 'bg-cyan-100 dark:bg-cyan-400/10', 
     borderHover: 'hover:border-cyan-300 dark:hover:border-cyan-400/30',
     glow: 'hover:shadow-cyan-500/10 dark:hover:shadow-[0_0_30px_-5px_rgba(34,211,238,0.2)]',
-    title: '98.4% Accuracy', 
+    title: '94% Accuracy', 
     desc: 'Trained on 2M+ plate images across diverse conditions — night, rain, motion blur, and occlusion.', 
     tag: 'Production-Grade' 
   },
