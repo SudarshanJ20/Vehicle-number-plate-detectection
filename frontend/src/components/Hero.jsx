@@ -83,7 +83,7 @@ export default function Hero() {
             </div>
             <div className="text-center md:text-left">
               <p className="flex items-center justify-center md:justify-start gap-2 text-2xl font-black text-slate-900 dark:text-white">
-                <ShieldCheck size={20} className="text-cyan-500" /> 98.4%
+                <ShieldCheck size={20} className="text-cyan-500" /> 94%
               </p>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mt-1">Detection Accuracy</p>
             </div>
